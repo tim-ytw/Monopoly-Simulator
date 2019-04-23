@@ -29,13 +29,20 @@ typedef priority_queue<Property*, vector<Property*>, PropertyComparator> Propert
 
 class Player
 {
+  friend class Game;
+  
   const int kInitMoney;
   
   int money_ = 0;
   
+  int location_ = 0;
+  
   bool bankrupted_ = false;
   
   Properties properties_;
+  
+  // Get cash to pay a currently unaffordable charge
+  void SellCheapestProperty();
   
 public:
   
@@ -43,7 +50,7 @@ public:
   
   Player(int init_money, string name = "Unnamed");
 
-  void reset();
+  void Reset();
   
   bool Bankrupted() { return bankrupted_; }
   

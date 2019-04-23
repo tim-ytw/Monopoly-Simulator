@@ -11,14 +11,29 @@
 
 using namespace std;
 
+const int kOriginPassGrant = 500;
+
 
 Game::Game(vector<Player*>& players, vector<Property*>& properties)
 : players_(players), properties_(properties), kBoardSize(properties.size())
 {
-  // Everyone starts at the origin
-  locations_ = vector<int>(players.size(), 0);
+  Reset();
 }
 
+
+
+void Game::Reset()
+{
+  for (auto player : players_)
+  {
+    player->Reset();
+  }
+  
+  for (auto property : properties_)
+  {
+    property->Reset();
+  }
+}
 
 
 Player* Game::GetWinner()
@@ -50,7 +65,7 @@ string Game::GetLocationName(int location)
 {
   if (location == 0) return "Starting Point";
   
-  auto prop = properties_[location - 1];
+  auto prop = properties_[location];
   
   string owner = (prop->owner == nullptr) ? "(No owner)" : "(" + prop->owner->name + "'s)";
   
@@ -58,98 +73,104 @@ string Game::GetLocationName(int location)
 }
 
 
-const int kOriginPassGrant = 500;
+
+void Game::Move(Player * player)
+{
+  
+  Logger::Debug(player->name, " at ", GetLocationName(player->location_));
+  
+  auto steps = rollDice(6);
+  
+  player->location_ += steps;
+  
+  // Pass by the origin -> Receive money
+  if (player->location_ >= kBoardSize)
+  {
+    player->GrantMoney(kOriginPassGrant);
+    
+    player->location_ = (player->location_ % kBoardSize);
+    
+    Logger::Debug("  received origin pass grant");
+  }
+  
+  Logger::Debug("  moves ", steps, " steps to ", GetLocationName(player->location_));
+}
+
+
+
+void Game::Engage(Player* player, Property* property)
+{
+  if (property->name == "start") return;
+  
+  // The property is available for sale
+  if (property->owner == nullptr)
+  {
+    Logger::Debug(property->name, " is available at ", property->kCost);
+    
+    if (player->WillingToBuy(property) && player->Charge(property->kCost))
+    {
+      player->GrantProperty(property);
+      
+      Logger::Debug("  bought it");
+      
+      assert(property->owner == player);
+    }
+  }
+  
+  // The player decides how to handle its own property.
+  else if (property->owner == player)
+  {
+    player->Handle(property);
+  }
+  
+  // The player must be charged for passing by other's property.
+  else
+  {
+    int pass_cost = property->PassCost();
+    
+    Logger::Debug("  needs to pay ", pass_cost);
+    
+    if (player->Charge(pass_cost))
+    {
+      assert(!property->owner->Bankrupted());
+      
+      property->owner->GrantMoney(pass_cost);
+      
+      Logger::Debug("  paid to ", property->owner->name);
+    }
+  }
+}
 
 
 Result Game::Run()
 {
   Result result;
-
-  auto log = Logger::Debug;
   
   // Run the game until there is only one player left - Monopoly
   while (true)
   {
     result.rounds ++;
     
-    log("\nRound " + to_string(result.rounds));
+    Logger::Debug("\nRound ", result.rounds);
     
     // Each player rolls the dice and takes random steps
     for (int id = 0; id < players_.size(); id ++)
     {
       auto player = players_[id];
       
-      if (player->Bankrupted()) continue;
-
-      auto loc_idx = locations_[id];
+      if (player->bankrupted_) continue;
       
-      log(player->name + " at " + GetLocationName(loc_idx));
+      Move(player);
       
-      auto steps = rollDice(6);
+      Property* property = properties_[player->location_];
       
-      locations_[id] += steps;
+      Engage(player, property);
       
-      // Pass by the origin -> Receive money
-      if (locations_[id] > properties_.size())
+      if (player->bankrupted_)
       {
-        player->GrantMoney(kOriginPassGrant);
-        
-        locations_[id] = (locations_[id] % kBoardSize);
-      
-        log("  received origin pass grant");
-      }
-      
-      
-      loc_idx = locations_[id];
-      
-      log("  moves " + to_string(steps) + " steps to " + GetLocationName(loc_idx));
-      
-      auto property_index = locations_[id] - 1;
-      
-      Property* property = properties_[property_index];
-      
-      // The property is available for sale
-      if (property->owner == nullptr)
-      {
-        log(property->name + " is available at " + to_string(property->kCost));
-        
-        if (player->WillingToBuy(property) && player->Charge(property->kCost))
-        {
-          player->GrantProperty(property);
-          
-          log("  bought it");
-          
-          assert(property->owner == player);
-        }
-      }
-      
-      // The player decides how to handle its own property.
-      else if (property->owner == player)
-      {
-        player->Handle(property);
-      }
-      
-      // The player must be charged for passing by other's property.
-      else
-      {
-        int pass_cost = property->PassCost();
-        
-        log("  will be charged " + to_string(pass_cost));
-        
-        if (player->Charge(pass_cost))
-        {
-          assert(!property->owner->Bankrupted());
-          
-          property->owner->GrantMoney(pass_cost);
-          
-          log("  paid to " + property->owner->name);
-        }
-        else if (player->Bankrupted())
-        {
-          log ("  bankrupted");
-          
-          result.losers.push_back(player);
-        }
+        Logger::Debug("  bankrupted");
+       
+        result.losers.push_back(player);
       }
     }
     
@@ -158,7 +179,7 @@ Result Game::Run()
     if (result.winner != nullptr) break;
   }
   
-  log("\nThe monopoly is " + result.winner->name);
-  
   return result;
 }
+
+

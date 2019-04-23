@@ -34,8 +34,8 @@ const string kPropertyNames[] =
   "Canberra",
   "Stockholm",
   "København",
-  "Islamabad",
   "Jerusalem",
+  "Wellington",
 };
 
 
@@ -69,6 +69,8 @@ int main(int argc, const char * argv[])
   
   vector<Property*> properties;
   
+  properties.push_back(new Property(0, "start"));
+  
   for (auto city_name : kPropertyNames)
   {
     auto cost = GetRandomCost();
@@ -82,7 +84,7 @@ int main(int argc, const char * argv[])
   
   auto winner = result.winner;
   
-  Logger::Info("After " + to_string(result.rounds) + " rounds, the winner is " + winner->name);
+  Logger::Info("After ", result.rounds, " rounds, the monopoly is ", winner->name);
   
   for (auto player :players)
   {

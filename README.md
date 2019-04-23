@@ -1,6 +1,6 @@
 ## Monopoly Simulator
 
-Skipped my afternoon tea today and built it to prove the game is unfair.
+Skipped my afternoon tea today to prove the game's unfairness.
 
 
 ### Compile the project

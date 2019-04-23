@@ -3,7 +3,6 @@
 #include <vector>
 #include <string>
 
-
 // Local
 #include "logger.hpp"
 #include "player.hpp"
@@ -16,15 +15,19 @@ using namespace std;
 Player::Player(int init_money, string n)
 : kInitMoney(init_money), name(n)
 {
-  reset();
+  Reset();
 }
 
 
-void Player::reset()
+void Player::Reset()
 {
-  money_ = kInitMoney;
+  location_ = 0;
   
   bankrupted_ = false;
+  
+  while (!properties_.empty()) SellCheapestProperty();
+  
+  money_ = kInitMoney;
 }
 
 
@@ -77,14 +80,12 @@ bool Player::Charge(int amount)
 {
   assert(amount >= 0);
   
-  static auto log = Logger::Debug;
-  
   // Can afford the charge with money in hand
   if (money_ > amount)
   {
     money_ -= amount;
    
-    log ("  was charged " + to_string(amount) + " now has " + to_string(money_) + " dollars");
+    Logger::Debug("  was charged ", amount, " and now has ", money_, " dollars left");
     
     return true;
   }
@@ -96,23 +97,29 @@ bool Player::Charge(int amount)
     
     return false;
   }
+  
+  Logger::Debug("  has only ", money_, " dollars");
 
   // Must sell some properties to get cash.
-  
-  auto cheapest_prop = properties_.top();
-  properties_.pop();
-  
-  money_ += cheapest_prop->SalePrice();
-  
-  log ("  sold " + cheapest_prop->name + " at " + to_string(cheapest_prop->SalePrice()));
-  
-  log ("  now has " + to_string(money_) + " dollars");
-  
-  // Sell it (to the bank)
-  cheapest_prop->Reset();
+  SellCheapestProperty();
   
   // Try again.
   return Charge(amount);
 }
 
 
+
+void Player::SellCheapestProperty()
+{
+  auto cheapest_prop = properties_.top();
+  properties_.pop();
+  
+  money_ += cheapest_prop->SalePrice();
+  
+  Logger::Debug("  sold ", cheapest_prop->name, " at ", cheapest_prop->SalePrice());
+  
+  Logger::Debug("  now has ", money_, " dollars");
+  
+  // Sell it (to the bank)
+  cheapest_prop->Reset();
+}

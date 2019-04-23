@@ -29,25 +29,31 @@ class Game
 {
   const int kBoardSize;
   
-  
-  vector<int> locations_;
-  
   vector<Player*>& players_;
  
   vector<Property*>& properties_;
-  
+
+  // Reset properties and players
+  void Reset();
   
   Player* GetWinner();
   
   string GetLocationName(int location);
   
+  // Each round contains 2 parts
+  
+  // 1) Move each player forward by random steps.
+  void Move(Player * player);
+  
+  // 2) The player engages the space they stand upon
+  void Engage(Player * player, Property * property);
+  
 public:
   
-  Game(vector<Player*>& players, vector<Property*>& properties);
+  Game(vector<Player *>& players, vector<Property *>& properties);
   
   // Run the game until there is only one player left - Monopoly
   Result Run();
-  
 };
 
 
