@@ -154,10 +154,8 @@ Result Game::Run()
     Logger::Debug("\nRound ", result.rounds);
     
     // Each player rolls the dice and takes random steps
-    for (int id = 0; id < players_.size(); id ++)
-    {
-      auto player = players_[id];
-      
+    for (auto player : players_)
+    { 
       if (player->bankrupted_) continue;
       
       Move(player);
